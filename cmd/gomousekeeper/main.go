@@ -1,3 +1,4 @@
+//go:generate go build -o go-mouse-keeper
 package main
 
 import (
