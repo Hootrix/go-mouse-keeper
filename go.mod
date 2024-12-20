@@ -1,4 +1,4 @@
-module github.com/Hootrix/GoMouseKeeper
+module github.com/Hootrix/GoMouseKeeper/cmd/gomousekeeper
 
 go 1.21
 
