@@ -2,7 +2,7 @@ module github.com/Hootrix/go-mouse-keeper
 
 go 1.21
 
-toolchain go1.22.7
+// toolchain go1.22.7
 
 require (
 	github.com/akavel/rsrc v0.10.2 // indirect
