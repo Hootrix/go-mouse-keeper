@@ -1,5 +1,7 @@
 # GoMouseKeeper
 
+![screenshot](screenshot.png)
+
 GoMouseKeeper / GoMouseBusyer keeps your mouse busy. It's particularly useful in scenarios where you need to maintain screen activity, such as preventing automatic screen locks or maintaining online status.
 
 ## Features
@@ -28,6 +30,13 @@ go install
 ```
 
 ## Usage
+
+```bash
+$ GoMouseKeeper
+```
+
+![cmd-screenshot](cmd-screenshot.png)
+
 
 1. After running the program, you'll see an icon in your system tray
 2. Click the icon to see the following options:
