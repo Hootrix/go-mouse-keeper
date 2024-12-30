@@ -17,6 +17,9 @@ GoMouseKeeper / GoMouseBusyer keeps your mouse busy. It's particularly useful in
 
 ```bash
 go install github.com/Hootrix/go-mouse-keeper/cmd/mouse-keeper@latest
+
+# or Specified version
+go install github.com/Hootrix/go-mouse-keeper/cmd/mouse-keeper@v0.1.8
 ```
 
 After installation, simply run `mouse-keeper` in your terminal to start the program.
