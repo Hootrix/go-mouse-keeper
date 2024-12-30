@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	VERSION      string = "0.1.6"
+	VERSION      string = "0.1.7"
 	URL          string = "https://www.hhtjim.com"
 	RuningStatus string = "..." //●
 	PauseStatus  string = "   " //○
@@ -273,7 +273,7 @@ func (mk *MouseKeeper) start() {
 			mouseKeeper.updateMenuState(config.isPaused) //确保初始化菜单状态正确
 
 			mk.simulateRealisticMouseMovement(mk.lastX, mk.lastY)
-			time.Sleep(time.Duration(30+nRrand.Intn(30)) * time.Second) // 随机等待30-60秒再次移动
+			time.Sleep(time.Duration(1+nRrand.Intn(5)) * time.Second) // 随机等待1-5秒再次移动
 			// time.Sleep(time.Duration(2) * time.Second) //DEBUG
 		}
 	}()
