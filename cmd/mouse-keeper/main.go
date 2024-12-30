@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	VERSION      string = "0.1.7"
+	VERSION      string = "0.1.8"
 	URL          string = "https://www.hhtjim.com"
 	RuningStatus string = "..." //●
 	PauseStatus  string = "   " //○
