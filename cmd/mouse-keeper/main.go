@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"math/rand"
 	"os"
 	"sync"
@@ -14,11 +14,13 @@ import (
 )
 
 var (
-	VERSION      string = "0.1.8"
+	VERSION      string = "0.1.9"
 	URL          string = "https://www.hhtjim.com"
 	RuningStatus string = "..." //●
 	PauseStatus  string = "   " //○
-	Logger       *log.Logger
+	Logger       *slog.Logger
+	logHandler   *slog.TextHandler
+	done         = make(chan struct{}) // 用于通知所有 goroutine 退出
 )
 
 // 全局配置和状态
@@ -58,12 +60,13 @@ var (
 )
 
 type MouseKeeper struct {
-	logger       *log.Logger
-	pauseMenu    *systray.MenuItem
-	lastX        int
-	lastY        int
-	lastMoveTime time.Time
-	timeoutMenus map[time.Duration]*systray.MenuItem
+	logger        *slog.Logger
+	pauseMenu     *systray.MenuItem
+	lastX         int
+	lastY         int
+	lastMoveTime  time.Time
+	timeoutMenus  map[time.Duration]*systray.MenuItem
+	logLevelMenus map[slog.Level]*systray.MenuItem
 }
 
 func init() {
@@ -79,11 +82,11 @@ func (mk *MouseKeeper) updateMenuState(isPaused bool) {
 	if isPaused {
 		mk.pauseMenu.SetTitle("Resume")
 		systray.SetTitle(PauseStatus)
-		mk.logger.Printf("System paused. Click 'Resume' to start mouse movement")
+		mk.logger.Info("System paused. Click 'Resume' to start mouse movement")
 	} else {
 		mk.pauseMenu.SetTitle("Pause")
 		systray.SetTitle(RuningStatus)
-		mk.logger.Printf("System resumed. Will start moving mouse after %v of inactivity", config.idleTimeout)
+		mk.logger.Info("System resumed", "idle_timeout", config.idleTimeout)
 	}
 }
 
@@ -94,12 +97,13 @@ func onReady() {
 
 	// Initialize timeout menu items map
 	mouseKeeper.timeoutMenus = make(map[time.Duration]*systray.MenuItem)
+	mouseKeeper.logLevelMenus = make(map[slog.Level]*systray.MenuItem)
 
 	// Add menu items
 	mouseKeeper.pauseMenu = systray.AddMenuItem("Resume", "Resume/Pause mouse movement") // Default show Resume
 
 	// Add timeout settings submenu
-	mTimeout := systray.AddMenuItem("Check Timeout Settings", "Check mouse rest time and start simulation") // 检查鼠标休憩时间后开始模拟
+	timeoutSubmenu := systray.AddMenuItem("Idle Timeout", "Set idle timeout")
 
 	// Create timeout menu items with initial state
 	timeouts := []struct {
@@ -115,12 +119,62 @@ func onReady() {
 	}
 
 	for _, t := range timeouts {
-		item := mTimeout.AddSubMenuItem(t.label, "Set timeout to "+t.label)
+		item := timeoutSubmenu.AddSubMenuItem(t.label, "Set timeout to "+t.label)
 		mouseKeeper.timeoutMenus[t.duration] = item
 		// Set initial check state
 		if config.idleTimeout == t.duration {
 			item.Check()
 		}
+	}
+
+	// 子菜单
+	systray.AddSeparator()
+	logLevelSubmenu := systray.AddMenuItem("Log Level", "Set log level")
+	levels := []struct {
+		level slog.Level
+		name  string
+	}{
+		// {slog.LevelDebug, "Debug"},
+		{slog.LevelInfo, "Info"},
+		{slog.LevelWarn, "Warn"},
+		{slog.LevelError, "Error"},
+	}
+
+	// Create menu items for each log level
+	for _, l := range levels {
+		menuItem := logLevelSubmenu.AddSubMenuItem(l.name, "Set log level to "+l.name)
+		mouseKeeper.logLevelMenus[l.level] = menuItem
+		if l.level == slog.LevelInfo {
+			menuItem.Check() // Default level is Info
+		}
+
+		// Set up click handler
+		go func(level slog.Level, item *systray.MenuItem) {
+			for {
+				select {
+				case <-item.ClickedCh:
+					// Uncheck all items
+					for _, mi := range mouseKeeper.logLevelMenus {
+						mi.Uncheck()
+					}
+
+					// Check the selected item
+					item.Check()
+
+					// Log before changing the level
+					Logger.Warn("Changing log level", "to", level)
+
+					// Update log level
+					logHandler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+						Level: level,
+					})
+					Logger = slog.New(logHandler)
+					mouseKeeper.logger = Logger
+				case <-done:
+					return // 退出 goroutine
+				}
+			}
+		}(l.level, menuItem)
 	}
 
 	systray.AddSeparator()
@@ -153,15 +207,20 @@ func onReady() {
 		menuItem := mouseKeeper.timeoutMenus[duration]
 
 		go func() {
-			for range menuItem.ClickedCh {
-				// Uncheck all items first
-				for _, item := range mouseKeeper.timeoutMenus {
-					item.Uncheck()
+			for {
+				select {
+				case <-menuItem.ClickedCh:
+					// Uncheck all items first
+					for _, item := range mouseKeeper.timeoutMenus {
+						item.Uncheck()
+					}
+					// Check the selected item
+					menuItem.Check()
+					config.setIdleTimeout(duration)
+					Logger.Warn("Idle timeout set", "duration", duration)
+				case <-done:
+					return // 退出 goroutine
 				}
-				// Check the selected item
-				menuItem.Check()
-				config.setIdleTimeout(duration)
-				Logger.Printf("Idle timeout set to %v", duration)
 			}
 		}()
 	}
@@ -181,7 +240,8 @@ func onReady() {
 }
 
 func onExit() {
-	// 清理工作
+	close(done) // 通知所有 goroutine 退出
+	os.Exit(0)
 }
 
 // 模拟真实的鼠标移动
@@ -200,7 +260,7 @@ func (mk *MouseKeeper) simulateRealisticMouseMovement(startX, startY int) {
 	targetX = max(0, min(width-1, targetX))
 	targetY = max(0, min(height-1, targetY))
 
-	mk.logger.Printf("Starting mouse movement to position (%d, %d)", targetX, targetY)
+	mk.logger.Info("Starting mouse movement", "target_x", targetX, "target_y", targetY)
 
 	// 记录这是系统移动
 	mk.lastMoveTime = time.Now()
@@ -208,7 +268,7 @@ func (mk *MouseKeeper) simulateRealisticMouseMovement(startX, startY int) {
 
 	// 更新最后位置
 	mk.lastX, mk.lastY = robotgo.Location()
-	mk.logger.Printf("Mouse movement completed")
+	mk.logger.Info("Mouse movement completed", "current_x", mk.lastX, "current_y", mk.lastY)
 }
 
 // 检查用户活动
@@ -223,7 +283,7 @@ func (mk *MouseKeeper) checkUserActivity() bool {
 	}
 
 	if deltaX > 5 || deltaY > 5 {
-		mk.logger.Printf("User activity detected (moved %d,%d pixels). System paused.", deltaX, deltaY)
+		mk.logger.Info("User activity detected", "delta_x", deltaX, "delta_y", deltaY)
 		isPaused := config.getPaused()
 		if !isPaused {
 			config.setPaused(true)
@@ -240,15 +300,18 @@ func (mk *MouseKeeper) start() {
 	// 检查用户活动的goroutine
 	go func() {
 		for {
-			time.Sleep(100 * time.Millisecond) // 更频繁地检查用户活动
+			select {
+			case <-time.After(100 * time.Millisecond): // 更频繁地检查用户活动
+				if config.getPaused() {
+					continue
+				}
 
-			if config.getPaused() {
-				continue
-			}
-
-			// 检查用户活动
-			if mk.checkUserActivity() {
-				continue
+				// 检查用户活动
+				if mk.checkUserActivity() {
+					continue
+				}
+			case <-done:
+				return // 退出 goroutine
 			}
 		}
 	}()
@@ -256,25 +319,26 @@ func (mk *MouseKeeper) start() {
 	// 自动移动鼠标的goroutine
 	go func() {
 		for {
+			select {
+			case <-time.After(time.Second): // 每秒检查一次
+				// 检查是否超过空闲时间
+				if time.Since(mk.lastMoveTime) >= config.idleTimeout {
+					config.setPaused(false) // 恢复运行
+					mk.updateMenuState(false)
+					mk.logger.Info("No mouse movement detected, starting simulation", "idle_timeout", config.idleTimeout)
+				}
 
-			time.Sleep(time.Second) // 每秒检查一次
+				if config.getPaused() {
+					continue
+				}
+				mouseKeeper.updateMenuState(config.isPaused) //确保初始化菜单状态正确
 
-			// 检查是否超过空闲时间
-			if time.Since(mk.lastMoveTime) >= config.idleTimeout {
-				config.setPaused(false) // 恢复运行
-				mk.updateMenuState(false)
-				mk.logger.Printf("No mouse movement detected for %v, starting simulation", config.idleTimeout)
+				mk.simulateRealisticMouseMovement(mk.lastX, mk.lastY)
+				time.Sleep(time.Duration(1+nRrand.Intn(5)) * time.Second) // 随机等待1-5秒再次移动
+				// time.Sleep(time.Duration(2) * time.Second) //DEBUG
+			case <-done:
+				return // 退出 goroutine
 			}
-
-			if config.getPaused() {
-				continue
-			}
-
-			mouseKeeper.updateMenuState(config.isPaused) //确保初始化菜单状态正确
-
-			mk.simulateRealisticMouseMovement(mk.lastX, mk.lastY)
-			time.Sleep(time.Duration(1+nRrand.Intn(5)) * time.Second) // 随机等待1-5秒再次移动
-			// time.Sleep(time.Duration(2) * time.Second) //DEBUG
 		}
 	}()
 
@@ -305,22 +369,25 @@ func abs(x int) int {
 }
 
 func main() {
-	// Initialize logger
-	// Logger = log.New(os.Stdout, "INFO: ", log.LstdFlags|log.Lshortfile)
-	Logger = log.New(os.Stdout, "INFO: ", log.LstdFlags)
+	// Initialize logger with default level (Info)
+	logHandler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	})
+	Logger = slog.New(logHandler)
 
 	// Initialize random seed
 	nRrand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	mouseKeeper = &MouseKeeper{
-		logger:       Logger,
-		timeoutMenus: make(map[time.Duration]*systray.MenuItem),
-		lastX:        0,
-		lastY:        0,
-		lastMoveTime: time.Now(),
+		logger:        Logger,
+		timeoutMenus:  make(map[time.Duration]*systray.MenuItem),
+		logLevelMenus: make(map[slog.Level]*systray.MenuItem),
+		lastX:         0,
+		lastY:         0,
+		lastMoveTime:  time.Now(),
 	}
 
-	Logger.Printf("MouseKeeper started (Paused). Click 'Resume' to start")
+	Logger.Info("MouseKeeper started (Paused). Click 'Resume' to start")
 
 	// 初始化鼠标位置
 	mouseKeeper.lastX, mouseKeeper.lastY = robotgo.Location()
