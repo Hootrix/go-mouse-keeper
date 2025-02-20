@@ -9,90 +9,66 @@ permissions:
   contents: write
 
 jobs:
-  # release-linux:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-go@v4
-  #       with:
-  #         go-version: '>=1.21.0'
-  #     - name: Install dependencies
-  #       run: |
-  #         sudo apt-get update
-  #         sudo apt-get install -y libx11-dev xorg-dev libxtst-dev libayatana-appindicator3-dev
-  #     - name: Build
-  #       run: |
-  #         go build -o dist/mouse-keeper-linux-amd64 ./cmd/mouse-keeper
-  #     - name: Upload Linux binary
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: linux-binary
-  #         path: dist/mouse-keeper-linux-amd64
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux
+            arch: amd64
+            binary: mouse-keeper-linux-amd64
+            deps: |
+              sudo apt-get update
+              sudo apt-get install -y libx11-dev xorg-dev libxtst-dev libayatana-appindicator3-dev
+          - os: windows-latest
+            platform: windows
+            arch: amd64
+            binary: mouse-keeper-windows-amd64.exe
+            deps: echo "No deps required for Windows"
+          - os: macos-latest
+            platform: darwin
+            arch: amd64
+            binary: mouse-keeper-darwin-amd64
+            deps: |
+              brew install pkg-config cmake gcc libx11 xquartz automake libtool cairo libxcb xorgproto opencv gtk+3
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
+            binary: mouse-keeper-darwin-arm64
+            deps: |
+              brew install pkg-config cmake gcc libx11 xquartz automake libtool cairo libxcb xorgproto opencv gtk+3
 
-  # release-windows:
-  #   runs-on: windows-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-go@v4
-  #       with:
-  #         go-version: '>=1.21.0'
-  #     - name: Build
-  #       run: |
-  #         go build -o dist/mouse-keeper-windows-amd64.exe ./cmd/mouse-keeper
-  #     - name: Upload Windows binary
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: windows-binary
-  #         path: dist/mouse-keeper-windows-amd64.exe
-
-  release-macos:
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
+    
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
         with:
           go-version: '>=1.21.0'
+          
       - name: Install dependencies
-        run: |
-          brew install pkg-config
-          brew install cmake
-          brew install gcc
-          brew install libx11
-          brew install xquartz
-          brew install automake
-          brew install libtool
-          brew install cairo
-          brew install libxcb
-          brew install xorgproto
-          brew install opencv
-          brew install gtk+3
-      - name: Build Intel
+        run: ${{ matrix.deps }}
+        
+      - name: Build
         env:
           CGO_ENABLED: 1
           CGO_CFLAGS: "-I/usr/local/include -I/usr/local/include/cairo -I/usr/local/include/glib-2.0 -I/usr/local/include/gtk-3.0"
           CGO_LDFLAGS: "-L/usr/local/lib -lcairo -lX11"
           GOFLAGS: "-tags=cairo"
+          GOOS: ${{ matrix.platform }}
+          GOARCH: ${{ matrix.arch }}
         run: |
           go mod download
-          GOOS=darwin GOARCH=amd64 go build -o dist/mouse-keeper-darwin-amd64 ./cmd/mouse-keeper
-      - name: Build Apple Silicon
-        env:
-          CGO_ENABLED: 1
-          CGO_CFLAGS: "-I/usr/local/include -I/usr/local/include/cairo -I/usr/local/include/glib-2.0 -I/usr/local/include/gtk-3.0"
-          CGO_LDFLAGS: "-L/usr/local/lib -lcairo -lX11"
-          GOFLAGS: "-tags=cairo"
-        run: |
-          go mod download
-          GOOS=darwin GOARCH=arm64 go build -o dist/mouse-keeper-darwin-arm64 ./cmd/mouse-keeper
-      - name: Upload macOS binaries
+          go build -o dist/${{ matrix.binary }} ./cmd/mouse-keeper
+          
+      - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: macos-binaries
-          path: dist/mouse-keeper-darwin-*
+          name: ${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist/${{ matrix.binary }}
 
   create-release:
-    # needs: [release-linux, release-windows, release-macos]
-    needs: [release-macos]
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -106,10 +82,10 @@ jobs:
         run: |
           # 准备发布文件
           cd dist
-          zip -j mouse-keeper-windows-amd64.zip windows-binary/mouse-keeper-windows-amd64.exe
-          tar czf mouse-keeper-linux-amd64.tar.gz linux-binary/mouse-keeper-linux-amd64
-          tar czf mouse-keeper-darwin-amd64.tar.gz macos-binaries/mouse-keeper-darwin-amd64
-          tar czf mouse-keeper-darwin-arm64.tar.gz macos-binaries/mouse-keeper-darwin-arm64
+          zip -j mouse-keeper-windows-amd64.zip windows-amd64/mouse-keeper-windows-amd64.exe
+          tar czf mouse-keeper-linux-amd64.tar.gz linux-amd64/mouse-keeper-linux-amd64
+          tar czf mouse-keeper-darwin-amd64.tar.gz darwin-amd64/mouse-keeper-darwin-amd64
+          tar czf mouse-keeper-darwin-arm64.tar.gz darwin-arm64/mouse-keeper-darwin-arm64
           
           # 创建 release
           gh release create ${GITHUB_REF_NAME} \
