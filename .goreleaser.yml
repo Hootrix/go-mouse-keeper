@@ -1,0 +1,53 @@
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: mouse-keeper
+    main: ./cmd/mouse-keeper
+    binary: mouse-keeper
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - Merge pull request
+      - Merge branch
+
+brews:
+  - name: mouse-keeper
+    tap:
+      owner: Hootrix
+      name: homebrew-mouse-keeper
+    description: "Keep your mouse moving to prevent screen saver or sleep"
+    homepage: "https://github.com/Hootrix/go-mouse-keeper"
+    license: "MIT"
+    install: |
+      bin.install "mouse-keeper"
+
+checksum:
+  name_template: 'checksums.txt'

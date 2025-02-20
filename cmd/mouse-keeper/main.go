@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	VERSION      string = "0.1.10"
+	VERSION      = "dev" // 版本号将通过 -ldflags 在构建时注入
 	URL          string = "https://www.hhtjim.com"
 	RuningStatus string = "..." //●
 	PauseStatus  string = "   " //○
