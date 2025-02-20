@@ -1,0 +1,94 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '>=1.21.0'
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev xorg-dev libxtst-dev
+      - name: Build
+        run: |
+          go build -o dist/mouse-keeper-linux-amd64 ./cmd/mouse-keeper
+      - name: Upload Linux binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: linux-binary
+          path: dist/mouse-keeper-linux-amd64
+
+  release-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '>=1.21.0'
+      - name: Build
+        run: |
+          go build -o dist/mouse-keeper-windows-amd64.exe ./cmd/mouse-keeper
+      - name: Upload Windows binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-binary
+          path: dist/mouse-keeper-windows-amd64.exe
+
+  release-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '>=1.21.0'
+      - name: Build Intel
+        run: |
+          GOOS=darwin GOARCH=amd64 go build -o dist/mouse-keeper-darwin-amd64 ./cmd/mouse-keeper
+      - name: Build Apple Silicon
+        run: |
+          GOOS=darwin GOARCH=arm64 go build -o dist/mouse-keeper-darwin-arm64 ./cmd/mouse-keeper
+      - name: Upload macOS binaries
+        uses: actions/upload-artifact@v3
+        with:
+          name: macos-binaries
+          path: dist/mouse-keeper-darwin-*
+
+  create-release:
+    needs: [release-linux, release-windows, release-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: dist
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 准备发布文件
+          cd dist
+          zip -j mouse-keeper-windows-amd64.zip windows-binary/mouse-keeper-windows-amd64.exe
+          tar czf mouse-keeper-linux-amd64.tar.gz linux-binary/mouse-keeper-linux-amd64
+          tar czf mouse-keeper-darwin-amd64.tar.gz macos-binaries/mouse-keeper-darwin-amd64
+          tar czf mouse-keeper-darwin-arm64.tar.gz macos-binaries/mouse-keeper-darwin-arm64
+          
+          # 创建 release
+          gh release create ${GITHUB_REF_NAME} \
+            mouse-keeper-windows-amd64.zip \
+            mouse-keeper-linux-amd64.tar.gz \
+            mouse-keeper-darwin-amd64.tar.gz \
+            mouse-keeper-darwin-arm64.tar.gz \
+            --title "${GITHUB_REF_NAME}" \
+            --generate-notes
