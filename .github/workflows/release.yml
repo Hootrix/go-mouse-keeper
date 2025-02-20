@@ -13,30 +13,32 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            platform: linux
-            arch: amd64
-            binary: mouse-keeper-linux-amd64
-            deps: |
-              sudo apt-get update
-              sudo apt-get install -y libx11-dev xorg-dev libxtst-dev libayatana-appindicator3-dev
+          # - os: ubuntu-latest
+          #   platform: linux
+          #   arch: amd64
+          #   binary: mouse-keeper-linux-amd64
+          #   deps: |
+          #     sudo apt-get update
+          #     sudo apt-get install -y libx11-dev xorg-dev libxtst-dev libayatana-appindicator3-dev
           - os: windows-latest
             platform: windows
             arch: amd64
             binary: mouse-keeper-windows-amd64.exe
-            deps: echo "No deps required for Windows"
-          - os: macos-latest
-            platform: darwin
-            arch: amd64
-            binary: mouse-keeper-darwin-amd64
             deps: |
-              brew install pkg-config cmake gcc libx11 xquartz automake libtool cairo libxcb xorgproto opencv gtk+3
-          - os: macos-latest
-            platform: darwin
-            arch: arm64
-            binary: mouse-keeper-darwin-arm64
-            deps: |
-              brew install pkg-config cmake gcc libx11 xquartz automake libtool cairo libxcb xorgproto opencv gtk+3
+              choco install mingw -y
+              echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          # - os: macos-latest
+          #   platform: darwin
+          #   arch: amd64
+          #   binary: mouse-keeper-darwin-amd64
+          #   deps: |
+          #     brew install pkg-config cmake gcc libx11 xquartz automake libtool cairo libxcb xorgproto opencv gtk+3
+          # - os: macos-latest
+          #   platform: darwin
+          #   arch: arm64
+          #   binary: mouse-keeper-darwin-arm64
+          #   deps: |
+          #     brew install pkg-config cmake gcc libx11 xquartz automake libtool cairo libxcb xorgproto opencv gtk+3
 
     runs-on: ${{ matrix.os }}
     
@@ -51,10 +53,10 @@ jobs:
         
       - name: Build
         env:
-          CGO_ENABLED: 1
-          CGO_CFLAGS: "-I/usr/local/include -I/usr/local/include/cairo -I/usr/local/include/glib-2.0 -I/usr/local/include/gtk-3.0"
-          CGO_LDFLAGS: "-L/usr/local/lib -lcairo -lX11"
-          GOFLAGS: "-tags=cairo"
+          CGO_ENABLED: ${{ matrix.platform != 'windows' }}
+          CGO_CFLAGS: ${{ matrix.platform != 'windows' && '-I/usr/local/include -I/usr/local/include/cairo -I/usr/local/include/glib-2.0 -I/usr/local/include/gtk-3.0' || '' }}
+          CGO_LDFLAGS: ${{ matrix.platform != 'windows' && '-L/usr/local/lib -lcairo -lX11' || '' }}
+          GOFLAGS: ${{ matrix.platform != 'windows' && '-tags=cairo' || '' }}
           GOOS: ${{ matrix.platform }}
           GOARCH: ${{ matrix.arch }}
         run: |
