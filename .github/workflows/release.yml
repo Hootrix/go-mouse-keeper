@@ -24,7 +24,7 @@ jobs:
         run: |
           go build -o dist/mouse-keeper-linux-amd64 ./cmd/mouse-keeper
       - name: Upload Linux binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: linux-binary
           path: dist/mouse-keeper-linux-amd64
@@ -40,7 +40,7 @@ jobs:
         run: |
           go build -o dist/mouse-keeper-windows-amd64.exe ./cmd/mouse-keeper
       - name: Upload Windows binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows-binary
           path: dist/mouse-keeper-windows-amd64.exe
@@ -59,7 +59,7 @@ jobs:
         run: |
           GOOS=darwin GOARCH=arm64 go build -o dist/mouse-keeper-darwin-arm64 ./cmd/mouse-keeper
       - name: Upload macOS binaries
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: macos-binaries
           path: dist/mouse-keeper-darwin-*
@@ -70,7 +70,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download all artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           path: dist
       - name: Create Release
