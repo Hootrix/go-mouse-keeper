@@ -57,6 +57,10 @@ jobs:
           brew install pkg-config
           brew install cmake
           brew install gcc
+          brew install libx11
+          brew install xquartz
+          brew install automake
+          brew install libtool
       - name: Build Intel
         run: |
           GOOS=darwin GOARCH=amd64 go build -o dist/mouse-keeper-darwin-amd64 ./cmd/mouse-keeper
