@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libx11-dev xorg-dev libxtst-dev
+          sudo apt-get install -y libx11-dev xorg-dev libxtst-dev libayatana-appindicator3-dev
       - name: Build
         run: |
           go build -o dist/mouse-keeper-linux-amd64 ./cmd/mouse-keeper
@@ -52,6 +52,11 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: '>=1.21.0'
+      - name: Install dependencies
+        run: |
+          brew install pkg-config
+          brew install cmake
+          brew install gcc
       - name: Build Intel
         run: |
           GOOS=darwin GOARCH=amd64 go build -o dist/mouse-keeper-darwin-amd64 ./cmd/mouse-keeper
