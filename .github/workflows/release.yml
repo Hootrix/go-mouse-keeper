@@ -13,13 +13,13 @@ jobs:
     strategy:
       matrix:
         include:
-          # - os: ubuntu-latest
-          #   platform: linux
-          #   arch: amd64
-          #   binary: mouse-keeper-linux-amd64
-          #   deps: |
-          #     sudo apt-get update
-          #     sudo apt-get install -y libx11-dev xorg-dev libxtst-dev libayatana-appindicator3-dev
+          - os: ubuntu-latest
+            platform: linux
+            arch: amd64
+            binary: mouse-keeper-linux-amd64
+            deps: |
+              sudo apt-get update
+              sudo apt-get install -y libx11-dev xorg-dev libxtst-dev libayatana-appindicator3-dev
           - os: windows-latest
             platform: windows
             arch: amd64
@@ -27,18 +27,18 @@ jobs:
             deps: |
               choco install mingw -y
               echo "C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          # - os: macos-latest
-          #   platform: darwin
-          #   arch: amd64
-          #   binary: mouse-keeper-darwin-amd64
-          #   deps: |
-          #     brew install pkg-config cmake gcc libx11 xquartz automake libtool cairo libxcb xorgproto opencv gtk+3
-          # - os: macos-latest
-          #   platform: darwin
-          #   arch: arm64
-          #   binary: mouse-keeper-darwin-arm64
-          #   deps: |
-          #     brew install pkg-config cmake gcc libx11 xquartz automake libtool cairo libxcb xorgproto opencv gtk+3
+          - os: macos-latest
+            platform: darwin
+            arch: amd64
+            binary: mouse-keeper-darwin-amd64
+            deps: |
+              brew install pkg-config cmake gcc libx11 xquartz automake libtool cairo libxcb xorgproto opencv gtk+3
+          - os: macos-latest
+            platform: darwin
+            arch: arm64
+            binary: mouse-keeper-darwin-arm64
+            deps: |
+              brew install pkg-config cmake gcc libx11 xquartz automake libtool cairo libxcb xorgproto opencv gtk+3
 
     runs-on: ${{ matrix.os }}
     
