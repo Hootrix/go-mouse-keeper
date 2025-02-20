@@ -61,6 +61,9 @@ jobs:
           brew install xquartz
           brew install automake
           brew install libtool
+          brew install cairo
+          brew install libxcb
+          brew install xorgproto
       - name: Build Intel
         run: |
           GOOS=darwin GOARCH=amd64 go build -o dist/mouse-keeper-darwin-amd64 ./cmd/mouse-keeper
