@@ -38,8 +38,36 @@ go install ./cmd/mouse-keeper
 $ mouse-keeper
 ```
 
-![cmd-screenshot](cmd-screenshot.png)
+### Command Line Options
 
+```bash
+Usage:
+  mouse-keeper [command]
+
+Available Commands:
+  enable      Start MouseKeeper when system starts
+  disable     Do not start MouseKeeper when system starts
+  help        Help about any command
+
+Flags:
+  -h, --help   help for mouse-keeper
+```
+
+### Auto-start Configuration
+
+To configure MouseKeeper to start automatically with your system:
+
+```bash
+# Enable auto-start
+sudo mouse-keeper enable
+
+# Disable auto-start
+sudo mouse-keeper disable
+```
+
+### System Tray Usage
+
+![cmd-screenshot](cmd-screenshot.png)
 
 1. After running the program, you'll see an icon in your system tray
 2. Click the icon to see the following options:
