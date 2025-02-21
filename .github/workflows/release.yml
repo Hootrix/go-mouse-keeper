@@ -31,13 +31,19 @@ jobs:
             platform: darwin
             arch: amd64
             binary: mouse-keeper-darwin-amd64
+            env:
+              CGO_ENABLED: "1"
             deps: |
+              brew update
               brew install pkg-config cmake gcc libx11 xquartz automake libtool cairo libxcb xorgproto opencv gtk+3
           - os: macos-latest
             platform: darwin
             arch: arm64
             binary: mouse-keeper-darwin-arm64
+            env:
+              CGO_ENABLED: "1"
             deps: |
+              brew update
               brew install pkg-config cmake gcc libx11 xquartz automake libtool cairo libxcb xorgproto opencv gtk+3
 
     runs-on: ${{ matrix.os }}
