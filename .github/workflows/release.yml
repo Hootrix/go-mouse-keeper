@@ -34,10 +34,8 @@ jobs:
             env:
               CGO_ENABLED: "1"
             deps: |
-              brew tap zegervdv/zathura
-              brew install libx11 libxkbcommon pkg-config cairo libxcb xorgproto gtk+3 libdbusmenu-glib
-              export PKG_CONFIG_PATH="/opt/homebrew/opt/libxcb/lib/pkgconfig:$PKG_CONFIG_PATH"
-              brew link --overwrite libx11
+              brew update
+              brew install pkg-config cairo gtk+3 libappindicator
           - os: macos-latest
             platform: darwin
             arch: arm64
@@ -45,10 +43,8 @@ jobs:
             env:
               CGO_ENABLED: "1"
             deps: |
-              brew tap zegervdv/zathura
-              brew install libx11 libxkbcommon pkg-config cairo libxcb xorgproto gtk+3 libdbusmenu-glib
-              export PKG_CONFIG_PATH="/opt/homebrew/opt/libxcb/lib/pkgconfig:$PKG_CONFIG_PATH"
-              brew link --overwrite libx11
+              brew update
+              brew install pkg-config cairo gtk+3 libappindicator
 
     runs-on: ${{ matrix.os }}
     
