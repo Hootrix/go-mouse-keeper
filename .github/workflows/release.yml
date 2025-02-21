@@ -34,7 +34,8 @@ jobs:
             env:
               CGO_ENABLED: "1"
             deps: |
-              brew install libx11 libxkbcommon pkg-config cairo libxcb xorgproto gtk+3 libappindicator-gtk3
+              brew tap zegervdv/zathura
+              brew install libx11 libxkbcommon pkg-config cairo libxcb xorgproto gtk+3 libayatana-appindicator
               export PKG_CONFIG_PATH="/opt/homebrew/opt/libxcb/lib/pkgconfig:$PKG_CONFIG_PATH"
               brew link --overwrite libx11
           - os: macos-latest
@@ -44,7 +45,8 @@ jobs:
             env:
               CGO_ENABLED: "1"
             deps: |
-              brew install libx11 libxkbcommon pkg-config cairo libxcb xorgproto gtk+3 libappindicator-gtk3
+              brew tap zegervdv/zathura
+              brew install libx11 libxkbcommon pkg-config cairo libxcb xorgproto gtk+3 libayatana-appindicator
               export PKG_CONFIG_PATH="/opt/homebrew/opt/libxcb/lib/pkgconfig:$PKG_CONFIG_PATH"
               brew link --overwrite libx11
 
