@@ -34,8 +34,8 @@ jobs:
             env:
               CGO_ENABLED: "1"
             deps: |
-              brew update
-              brew install pkg-config cmake gcc libx11 xquartz automake libtool cairo libxcb xorgproto opencv gtk+3
+              brew install libx11 libxkbcommon pkg-config
+              brew link --overwrite libx11
           - os: macos-latest
             platform: darwin
             arch: arm64
@@ -43,8 +43,8 @@ jobs:
             env:
               CGO_ENABLED: "1"
             deps: |
-              brew update
-              brew install pkg-config cmake gcc libx11 xquartz automake libtool cairo libxcb xorgproto opencv gtk+3
+              brew install libx11 libxkbcommon pkg-config
+              brew link --overwrite libx11
 
     runs-on: ${{ matrix.os }}
     
@@ -53,6 +53,14 @@ jobs:
       - uses: actions/setup-go@v4
         with:
           go-version: '>=1.21.0'
+          
+      - name: Cache Homebrew
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/Library/Caches/Homebrew
+            /opt/homebrew
+          key: ${{ runner.os }}-brew-${{ hashFiles('**/go.mod') }}
           
       - name: Install dependencies
         run: ${{ matrix.deps }}
