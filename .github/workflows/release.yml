@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: macos-13  # 使用 macOS 13 避免 macOS 15 API 废弃问题
     
     steps:
       - name: Checkout code
