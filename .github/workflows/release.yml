@@ -23,16 +23,18 @@ jobs:
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - name: Build Universal Binary
+        env:
+          CGO_ENABLED: 1
         run: |
           VERSION=${{ steps.version.outputs.VERSION }}
           
-          # Build for Intel
-          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w -X main.VERSION=$VERSION" \
-            -o mouse-keeper-amd64 ./cmd/mouse-keeper
-          
-          # Build for Apple Silicon
-          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w -X main.VERSION=$VERSION" \
+          # Build for Apple Silicon (native on macos-latest which is arm64)
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=1 go build -ldflags="-s -w -X main.VERSION=$VERSION" \
             -o mouse-keeper-arm64 ./cmd/mouse-keeper
+          
+          # Build for Intel (cross-compile)
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -ldflags="-s -w -X main.VERSION=$VERSION" \
+            -o mouse-keeper-amd64 ./cmd/mouse-keeper
           
           # Create Universal Binary
           lipo -create -output mouse-keeper-universal mouse-keeper-amd64 mouse-keeper-arm64
