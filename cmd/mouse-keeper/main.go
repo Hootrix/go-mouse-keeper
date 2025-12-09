@@ -24,7 +24,7 @@ var iconRunData []byte
 var iconPauseData []byte
 
 var (
-	VERSION      string = "0.1.11"
+	VERSION      string = "0.2.0"
 	URL          string = "https://www.hhtjim.com"
 	RuningStatus string = "" //● ...
 	PauseStatus  string = "" //○

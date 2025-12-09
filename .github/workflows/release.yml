@@ -1,0 +1,141 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Build Universal Binary
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          
+          # Build for Intel
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w -X main.VERSION=$VERSION" \
+            -o mouse-keeper-amd64 ./cmd/mouse-keeper
+          
+          # Build for Apple Silicon
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w -X main.VERSION=$VERSION" \
+            -o mouse-keeper-arm64 ./cmd/mouse-keeper
+          
+          # Create Universal Binary
+          lipo -create -output mouse-keeper-universal mouse-keeper-amd64 mouse-keeper-arm64
+
+      - name: Create .app bundle
+        run: |
+          APP_NAME="MouseKeeper"
+          VERSION=${{ steps.version.outputs.VERSION }}
+          APP_DIR="$APP_NAME.app"
+          
+          # Create .app structure
+          mkdir -p "$APP_DIR/Contents/MacOS"
+          mkdir -p "$APP_DIR/Contents/Resources"
+          
+          # Copy binary
+          cp mouse-keeper-universal "$APP_DIR/Contents/MacOS/$APP_NAME"
+          chmod +x "$APP_DIR/Contents/MacOS/$APP_NAME"
+          
+          # Create Info.plist
+          cat > "$APP_DIR/Contents/Info.plist" << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>$APP_NAME</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.hhtjim.mousekeeper</string>
+              <key>CFBundleName</key>
+              <string>$APP_NAME</string>
+              <key>CFBundleDisplayName</key>
+              <string>Mouse Keeper</string>
+              <key>CFBundleVersion</key>
+              <string>$VERSION</string>
+              <key>CFBundleShortVersionString</key>
+              <string>$VERSION</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+              <key>CFBundleIconFile</key>
+              <string>AppIcon</string>
+              <key>LSMinimumSystemVersion</key>
+              <string>10.13</string>
+              <key>LSUIElement</key>
+              <true/>
+              <key>NSHighResolutionCapable</key>
+              <true/>
+          </dict>
+          </plist>
+          EOF
+          
+          # Convert icon.png to .icns
+          if [ -f "icon.png" ]; then
+            ICONSET="AppIcon.iconset"
+            mkdir -p "$ICONSET"
+            sips -z 16 16     icon.png --out "$ICONSET/icon_16x16.png"
+            sips -z 32 32     icon.png --out "$ICONSET/icon_16x16@2x.png"
+            sips -z 32 32     icon.png --out "$ICONSET/icon_32x32.png"
+            sips -z 64 64     icon.png --out "$ICONSET/icon_32x32@2x.png"
+            sips -z 128 128   icon.png --out "$ICONSET/icon_128x128.png"
+            sips -z 256 256   icon.png --out "$ICONSET/icon_128x128@2x.png"
+            sips -z 256 256   icon.png --out "$ICONSET/icon_256x256.png"
+            sips -z 512 512   icon.png --out "$ICONSET/icon_256x256@2x.png"
+            sips -z 512 512   icon.png --out "$ICONSET/icon_512x512.png"
+            sips -z 1024 1024 icon.png --out "$ICONSET/icon_512x512@2x.png"
+            iconutil -c icns "$ICONSET" -o "$APP_DIR/Contents/Resources/AppIcon.icns"
+            rm -rf "$ICONSET"
+          fi
+
+      - name: Create DMG
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+          DMG_NAME="MouseKeeper-${VERSION}.dmg"
+          
+          # Create a temporary directory for DMG contents
+          mkdir -p dmg_contents
+          cp -r MouseKeeper.app dmg_contents/
+          
+          # Create a symbolic link to Applications folder
+          ln -s /Applications dmg_contents/Applications
+          
+          # Create DMG
+          hdiutil create -volname "MouseKeeper" \
+            -srcfolder dmg_contents \
+            -ov -format UDZO \
+            "$DMG_NAME"
+          
+          # Also create a zip for those who prefer it
+          zip -r "MouseKeeper-${VERSION}-macos.zip" MouseKeeper.app
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: MouseKeeper-macos
+          path: |
+            MouseKeeper-*.dmg
+            MouseKeeper-*.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            MouseKeeper-*.dmg
+            MouseKeeper-*.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

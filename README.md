@@ -13,18 +13,28 @@ GoMouseKeeper / GoMouseBusyer keeps your mouse busy. It's particularly useful in
 
 ## Installation
 
-### Option 1: Direct Installation (Recommended)
+### Option 1: Download App (Recommended)
+
+Download the latest `.dmg` file from [Releases](https://github.com/Hootrix/go-mouse-keeper/releases/latest):
+
+1. Download `MouseKeeper-x.x.x.dmg`
+2. Open the DMG file
+3. Drag `MouseKeeper.app` to Applications folder
+4. Launch from Applications or Spotlight
+
+> **Note**: On first launch, you may need to right-click and select "Open" to bypass Gatekeeper.
+
+### Option 2: Go Install
+
+If you have Go installed:
 
 ```bash
 go install github.com/Hootrix/go-mouse-keeper/cmd/mouse-keeper@latest
-
-# or Specified version
-go install github.com/Hootrix/go-mouse-keeper/cmd/mouse-keeper@v0.1.8
 ```
 
-After installation, simply run `mouse-keeper` in your terminal to start the program.
+Then run `mouse-keeper` in your terminal.
 
-### Option 2: Install from Source
+### Option 3: Build from Source
 
 ```bash
 git clone https://github.com/Hootrix/go-mouse-keeper.git
@@ -77,10 +87,6 @@ sudo mouse-keeper disable
 3. The program starts in paused state by default, click "Resume" to start
 4. The program automatically pauses when manual mouse movement is detected
 
-## Status Icon Guide
-
-- `...` (●): Program is running
-- `   ` (○): Program is paused
 
 ## Contributing
 
