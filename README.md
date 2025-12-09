@@ -24,6 +24,15 @@ Download the latest `.dmg` file from [Releases](https://github.com/Hootrix/go-mo
 
 > **Note**: On first launch, you may need to right-click and select "Open" to bypass Gatekeeper.
 
+### ⚠️ Accessibility Permission Required
+
+MouseKeeper needs **Accessibility permission** to control the mouse:
+
+1. Open **System Settings** → **Privacy & Security** → **Accessibility**
+2. Click the **+** button and add `MouseKeeper.app` (from Applications folder)
+3. Make sure the checkbox is enabled
+4. Restart MouseKeeper if it was already running
+
 ### Option 2: Go Install
 
 If you have Go installed:
