@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: macos-13  # 使用 macOS 13 避免 macOS 15 API 废弃问题
+    runs-on: macos-14
     
     steps:
       - name: Checkout code
@@ -25,15 +25,20 @@ jobs:
       - name: Build Universal Binary
         env:
           CGO_ENABLED: 1
+          CGO_CFLAGS: "-Wno-deprecated-declarations"
         run: |
           VERSION=${{ steps.version.outputs.VERSION }}
           
-          # Build for Apple Silicon (native on macos-latest which is arm64)
-          GOOS=darwin GOARCH=arm64 CGO_ENABLED=1 go build -ldflags="-s -w -X main.VERSION=$VERSION" \
+          # Build for Apple Silicon (native)
+          GOOS=darwin GOARCH=arm64 CGO_ENABLED=1 \
+            CGO_CFLAGS="-Wno-deprecated-declarations" \
+            go build -ldflags="-s -w -X main.VERSION=$VERSION" \
             -o mouse-keeper-arm64 ./cmd/mouse-keeper
           
           # Build for Intel (cross-compile)
-          GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -ldflags="-s -w -X main.VERSION=$VERSION" \
+          GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 \
+            CGO_CFLAGS="-Wno-deprecated-declarations" \
+            go build -ldflags="-s -w -X main.VERSION=$VERSION" \
             -o mouse-keeper-amd64 ./cmd/mouse-keeper
           
           # Create Universal Binary
