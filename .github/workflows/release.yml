@@ -111,6 +111,33 @@ jobs:
             rm -rf "$ICONSET"
           fi
 
+      - name: Decode signing certificate
+        env:
+          MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
+        run: |
+          echo "$MAC_CERT_P12" | base64 --decode > /tmp/mousekeeper.p12
+
+      - name: Import signing certificate to temporary keychain
+        env:
+          MAC_CERT_PWD: ${{ secrets.MAC_CERT_PWD }}
+        run: |
+          security create-keychain -p "" build.keychain
+          security import /tmp/mousekeeper.p12 -k ~/Library/Keychains/build.keychain -P "$MAC_CERT_PWD" -T /usr/bin/codesign
+          security list-keychains -s ~/Library/Keychains/build.keychain
+          security default-keychain -s ~/Library/Keychains/build.keychain
+          security unlock-keychain -p "" ~/Library/Keychains/build.keychain
+          security set-key-partition-list -S apple-tool:,apple: -k "" ~/Library/Keychains/build.keychain
+
+      - name: Codesign app (self-signed)
+        env:
+          SIGN_IDENTITY: ${{ secrets.SIGN_IDENTITY }}
+        run: |
+          codesign --force --deep --options runtime \
+            --entitlements entitlements.plist \
+            --sign "$SIGN_IDENTITY" \
+            MouseKeeper.app
+          codesign -dv --verbose=4 MouseKeeper.app
+
       - name: Create DMG
         run: |
           VERSION=${{ steps.version.outputs.VERSION }}
