@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
 	"time"
@@ -24,7 +25,7 @@ var iconRunData []byte
 var iconPauseData []byte
 
 var (
-	VERSION      string = "0.2.0"
+	VERSION      string = "0.2.1"
 	URL          string = "https://www.hhtjim.com"
 	RuningStatus string = "" //● ...
 	PauseStatus  string = "" //○
@@ -197,26 +198,31 @@ func onReady() {
 	about := systray.AddMenuItem("About", URL)
 
 	go func() {
-		for range mouseKeeper.pauseMenu.ClickedCh {
-			isPaused := config.getPaused()
-			newState := !isPaused // 新状态: isPaused=true -> newState=false(运行)
+		for {
+			select {
+			case <-mouseKeeper.pauseMenu.ClickedCh:
+				isPaused := config.getPaused()
+				newState := !isPaused // 新状态: isPaused=true -> newState=false(运行)
 
-			if newState {
-				// newState=true 表示切换到暂停，不需要特殊处理
-				config.setPaused(newState)
-				mouseKeeper.updateMenuState(newState)
-			} else {
-				// newState=false 表示切换到运行（Resume）
-				// 先添加延迟，避免检测到点击菜单的鼠标移动
-				time.Sleep(time.Second)
+				if newState {
+					// newState=true 表示切换到暂停，不需要特殊处理
+					config.setPaused(newState)
+					mouseKeeper.updateMenuState(newState)
+				} else {
+					// newState=false 表示切换到运行（Resume）
+					// 先添加延迟，避免检测到点击菜单的鼠标移动
+					time.Sleep(time.Second)
 
-				// 重置最后位置和时间
-				mouseKeeper.lastX, mouseKeeper.lastY = robotgo.Location()
-				mouseKeeper.lastMoveTime = time.Now()
+					// 重置最后位置和时间
+					mouseKeeper.lastX, mouseKeeper.lastY = robotgo.Location()
+					mouseKeeper.lastMoveTime = time.Now()
 
-				// 最后再更新状态
-				config.setPaused(newState)
-				mouseKeeper.updateMenuState(newState)
+					// 最后再更新状态
+					config.setPaused(newState)
+					mouseKeeper.updateMenuState(newState)
+				}
+			case <-done:
+				return
 			}
 		}
 	}()
@@ -246,15 +252,25 @@ func onReady() {
 	}
 
 	go func() {
-		for range mQuit.ClickedCh {
-			systray.Quit()
-			return
+		for {
+			select {
+			case <-mQuit.ClickedCh:
+				systray.Quit()
+				return
+			case <-done:
+				return
+			}
 		}
 	}()
 
 	go func() {
-		for range about.ClickedCh {
-			open.Run(URL)
+		for {
+			select {
+			case <-about.ClickedCh:
+				open.Run(URL)
+			case <-done:
+				return
+			}
 		}
 	}()
 }
@@ -335,7 +351,7 @@ func abs(x int) int {
 func (mk *MouseKeeper) start() {
 	// 用户活动检测 goroutine
 	go func() {
-		ticker := time.NewTicker(200 * time.Millisecond)
+		ticker := time.NewTicker(500 * time.Millisecond)
 		defer ticker.Stop()
 		for {
 			select {
@@ -428,6 +444,21 @@ func main() {
 		Level: slog.LevelInfo,
 	})
 	Logger = slog.New(logHandler)
+
+	// 定期强制 GC 并释放内存给操作系统
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				runtime.GC()
+				Logger.Debug("Forced GC completed")
+			case <-done:
+				return
+			}
+		}
+	}()
 
 	svcConfig := &service.Config{
 		Name:        "com.hhtjim.mousekeeper", // 使用反域名格式
